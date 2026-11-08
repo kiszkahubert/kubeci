@@ -1,0 +1,45 @@
+services:
+  db:
+    build: ./db
+    container_name: kubeci-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: kubeci
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kubeci"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  pipeline-service:
+    build: ./pipeline-service
+    container_name: kubeci-pipeline-service
+    environment:
+      SPRING_DATASOURCE_IP: db
+      SPRING_DATASOURCE_PORT: 5432
+      SPRING_DATASOURCE_NAME: kubeci
+      SPRING_DATASOURCE_USERNAME: kubeci
+      SPRING_DATASOURCE_PASSWORD: kubeci
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+      - frontend
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  backend:
+    internal: true
+  frontend:
+
+volumes:
+  pgdata:
